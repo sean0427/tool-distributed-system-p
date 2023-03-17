@@ -10,6 +10,7 @@ import (
 type outbox struct {
 	Query    string `json:"query"`
 	Topic    string `json:"topic"`
+	Action   string `json:"action"`
 	EntityId int64  `json:"entity_id"`
 }
 
@@ -32,6 +33,7 @@ func TransactionWithOutboxMsg[T any](ctx context.Context,
 		outbox := outbox{
 			EntityId: id,
 			Query:    msg,
+			Action:   "Create/Update",
 			Topic:    topic}
 
 		if err != nil {
@@ -39,15 +41,33 @@ func TransactionWithOutboxMsg[T any](ctx context.Context,
 		}
 
 		ret := _tx.Model(&outbox).Create(&outbox)
-		if ret.Error != nil {
-			return ret.Error
-		}
-		return nil
+		return ret.Error
 	})
 
-	if err != nil {
-		return err
-	}
+	return err
+}
 
-	return nil
+func TransactionDeleteWithOutboxMsg(ctx context.Context,
+	db *gorm.DB,
+	topic string,
+	id int64,
+	queryFunc func(tx *gorm.DB) error) error {
+
+	err := db.WithContext(ctx).Transaction(func(_tx *gorm.DB) error {
+		err := queryFunc(_tx)
+		outbox := outbox{
+			EntityId: id,
+			Query:    "",
+			Action:   "Delete",
+			Topic:    topic}
+
+		if err != nil {
+			return err
+		}
+
+		ret := _tx.Model(&outbox).Create(&outbox)
+		return ret.Error
+	})
+
+	return err
 }
