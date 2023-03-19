@@ -28,7 +28,7 @@ func TransactionWithOutboxMsg[T any](ctx context.Context,
 		return err
 	}
 
-	err = db.WithContext(ctx).Transaction(func(_tx *gorm.DB) error {
+	return db.WithContext(ctx).Transaction(func(_tx *gorm.DB) error {
 		id, err := queryFunc(_tx)
 		outbox := outbox{
 			EntityId: id,
@@ -43,8 +43,6 @@ func TransactionWithOutboxMsg[T any](ctx context.Context,
 		ret := _tx.Model(&outbox).Create(&outbox)
 		return ret.Error
 	})
-
-	return err
 }
 
 func TransactionDeleteWithOutboxMsg(ctx context.Context,
@@ -53,7 +51,7 @@ func TransactionDeleteWithOutboxMsg(ctx context.Context,
 	id int64,
 	queryFunc func(tx *gorm.DB) error) error {
 
-	err := db.WithContext(ctx).Transaction(func(_tx *gorm.DB) error {
+	return db.WithContext(ctx).Transaction(func(_tx *gorm.DB) error {
 		err := queryFunc(_tx)
 		outbox := outbox{
 			EntityId: id,
@@ -68,6 +66,4 @@ func TransactionDeleteWithOutboxMsg(ctx context.Context,
 		ret := _tx.Model(&outbox).Create(&outbox)
 		return ret.Error
 	})
-
-	return err
 }
